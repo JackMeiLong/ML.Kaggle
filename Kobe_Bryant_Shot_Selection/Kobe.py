@@ -16,6 +16,8 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.cross_validation import cross_val_score
 from sklearn.feature_selection import RFE
 from sklearn.decomposition import PCA
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
 
 class Kobe(object):
     
@@ -90,6 +92,22 @@ class Kobe(object):
         
         return classifier_GB
         
+   def train_DT(self):
+       samples=self.trainset.values
+       target=self.trainlabel
+       classifier_DT = DecisionTreeClassifier(max_depth=40)
+       classifier_DT.fit(samples,target)
+       
+       return classifier_DT
+       
+   def train_SVC(self):
+       samples=self.trainset.values
+       target=self.trainlabel
+       classifier_SVC=SVC(kernel='rbf')
+       classifier_SVC.fit(samples,target)
+       
+       return classifier_SVC
+       
    def evaluate(self,y_pred):
         y_true=self.trainlabel.values
         m=np.shape(y_true)[0]
@@ -181,7 +199,7 @@ inX=testset[:,1:]
 
 print 'Decomposition:PCA'
 
-k=10
+k=50
 pca=kobe.dimension_reduce(k)
 
 trainset_new=pca.transform(trainset)
@@ -213,22 +231,22 @@ inX_new=pca.transform(inX)
 # Random Forest
 #==============================================================================
 
-classifier_RF=kobe.train_RF(trainset_new,trainlabel,10)
+#classifier_RF=kobe.train_RF(trainset_new,trainlabel,10)
 
 #print 'RF-Train: Cross-Validation'
 #print kobe.cross_validation(classifier_RF)
 
-y_train_pred_RF=classifier_RF.predict(trainset_new)
-
-print 'RF-Train: Precision & Recall'
-accuracy_train_RF=kobe.evaluate(y_train_pred_RF)
-
-print 'RF-Train: Accuracy'
-print accuracy_train_RF
-
-y_test_RF=classifier_RF.predict_proba(inX_new)
-
-kobe.tocsv(y_test_RF[:,1])
+#y_train_pred_RF=classifier_RF.predict(trainset_new)
+#
+#print 'RF-Train: Precision & Recall'
+#accuracy_train_RF=kobe.evaluate(y_train_pred_RF)
+#
+#print 'RF-Train: Accuracy'
+#print accuracy_train_RF
+#
+#y_test_RF=classifier_RF.predict_proba(inX_new)
+#
+#kobe.tocsv(y_test_RF[:,1])
 
 
 #accuracy=kobe.optimize()
@@ -255,6 +273,43 @@ kobe.tocsv(y_test_RF[:,1])
 
 #kobe.tocsv(y_test_GBDT[:,1])
 
+#==============================================================================
+# Decision Tree
+#==============================================================================
+#classifier_DT=kobe.train_DT()
+#print 'CV-DT: Cross-Validation'
+#print kobe.cross_validation(classifier_DT)
+#
+#y_train_pred_DT=classifier_DT.predict(trainset)
+#
+#print 'DT-Train: Precision & Recall'
+#accuracy_train_DT=kobe.evaluate(y_train_pred_DT)
+#
+#print 'DT-Train: Accuracy'
+#print accuracy_train_DT
+#
+#y_test_DT=classifier_DT.predict_proba(inX)
+#
+#kobe.tocsv(y_test_DT[:,1])
+
+#==============================================================================
+# SVC
+#==============================================================================
+classifier_SVC=kobe.train_SVC()
+print 'CV-SVC: Cross-Validation'
+print kobe.cross_validation(classifier_SVC)
+
+y_train_pred_SVC=classifier_SVC.predict(trainset)
+
+print 'SVC-Train: Precision & Recall'
+accuracy_train_SVC=kobe.evaluate(y_train_pred_SVC)
+
+print 'SVC-Train: Accuracy'
+print accuracy_train_SVC
+
+y_test_SVC=classifier_SVC.predict_proba(inX)
+
+kobe.tocsv(y_test_SVC[:,1])
 
 print '<----------------------------------------------->'
 print datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
