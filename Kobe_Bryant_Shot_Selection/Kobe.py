@@ -103,7 +103,7 @@ class Kobe(object):
    def train_SVC(self):
        samples=self.trainset.values
        target=self.trainlabel
-       classifier_SVC=SVC(kernel='rbf')
+       classifier_SVC=SVC(kernel='rbf',probability=True)
        classifier_SVC.fit(samples,target)
        
        return classifier_SVC
