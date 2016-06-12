@@ -22,6 +22,7 @@ from sklearn.svm import SVC
 class Kobe(object):
     
    def __init__(self):
+       self.df=[]
        self.trainset=[]
        self.trainlabel=[]
        self.testset=[]
@@ -30,8 +31,9 @@ class Kobe(object):
    def loaddataset(self,path,module):
        df=pd.read_csv(path)
        
-       shot_made_flag=df['shot_made_flag']
+       self.df=df
        
+       shot_made_flag=df['shot_made_flag']      
        shot_id=df['shot_id']
        action_type=pd.get_dummies(df['action_type'])
        combined_shot_type=pd.get_dummies(df['combined_shot_type'])
@@ -45,15 +47,17 @@ class Kobe(object):
        seconds=df['seconds_remaining']
        time_combined=pd.DataFrame({'time_combined':minutes.values*60+seconds.values})
        distance=df['shot_distance']
+       shot_distance=np.sqrt((loc_x/10)**2+(loc_y/10)**2)
+       season=df['season'].apply(lambda x:x[:4])
        shot_type=pd.get_dummies(df['shot_type'])
        shot_zone_area=pd.get_dummies(df['shot_zone_area'])
        shot_zone_basic=pd.get_dummies(df['shot_zone_basic'])
        shot_zone_range=pd.get_dummies(df['shot_zone_range'])
        opponent=pd.get_dummies(df['opponent'])
-      
+       
        dataset=pd.concat([shot_made_flag,shot_id,action_type,combined_shot_type,loc_x,loc_y,
-                          time_combined,period,playoffs,distance,shot_type,shot_zone_area,
-                          shot_zone_basic,shot_zone_range,opponent],axis=1)
+                          time_combined,period,playoffs,shot_distance,season,shot_type,shot_zone_area,
+                          shot_zone_basic,opponent],axis=1)
                           
        if module=='train':
            train_df=dataset[np.isnan(shot_made_flag)==False]
@@ -172,6 +176,45 @@ class Kobe(object):
                accuracy[i][j]=accuracy_train_RF
         
        return accuracy
+    
+   def explore_feature(self):
+       df=self.df
+       not_need=[]       
+       
+       shot_id=df['shot_id']
+       action_type=df['action_type']
+       combined_shot_type=df['combined_shot_type']
+       
+       not_need.extend(['game_event_id', 'game_id'])
+       
+       lat=df['lat']
+       lon=df['lon']
+       loc_x=df['loc_x']
+       loc_y=df['loc_y']
+       
+       not_need.extend(['lat', 'lon'])
+       
+       minutes=df['minutes_remaining']
+       seconds=df['seconds_remaining']
+       time_combined=pd.DataFrame({'time_combined':minutes.values*60+seconds.values})
+       
+       not_need.extend(['minutes_remaining', 'seconds_remaining'])
+       
+       period=df['period']
+       playoffs=df['playoffs']
+       
+       distance=df['shot_distance']
+       shot_distance=np.sqrt((loc_x/10)**2+(loc_y/10)**2)
+       season=df['season'].apply(lambda x:x[:4])
+       shot_type=df['shot_type']
+       shot_zone_area=df['shot_zone_area']
+       shot_zone_basic=df['shot_zone_basic']
+       shot_zone_range=df['shot_zone_range']
+       opponent=df['opponent']
+       shot_made_flag=df['shot_made_flag']
+       
+       return df
+       
                
 
 #==============================================================================
@@ -197,13 +240,20 @@ inX=testset[:,1:]
 # Preprocess
 #==============================================================================
 
-print 'Decomposition:PCA'
+#print 'Decomposition:PCA'
+#
+#k=30
+#pca=kobe.dimension_reduce(k)
+#
+#trainset_new=pca.transform(trainset)
+#inX=pca.transform(inX)
 
-k=50
-pca=kobe.dimension_reduce(k)
 
-trainset_new=pca.transform(trainset)
-inX_new=pca.transform(inX)
+#==============================================================================
+# Explore Feature
+#==============================================================================
+
+#kobe_df=kobe.explore_feature()
 
 #==============================================================================
 # Logistic Regression
@@ -231,22 +281,22 @@ inX_new=pca.transform(inX)
 # Random Forest
 #==============================================================================
 
-#classifier_RF=kobe.train_RF(trainset_new,trainlabel,10)
+classifier_RF=kobe.train_RF(trainset,trainlabel,10)
 
 #print 'RF-Train: Cross-Validation'
 #print kobe.cross_validation(classifier_RF)
 
-#y_train_pred_RF=classifier_RF.predict(trainset_new)
-#
-#print 'RF-Train: Precision & Recall'
-#accuracy_train_RF=kobe.evaluate(y_train_pred_RF)
-#
-#print 'RF-Train: Accuracy'
-#print accuracy_train_RF
-#
-#y_test_RF=classifier_RF.predict_proba(inX_new)
-#
-#kobe.tocsv(y_test_RF[:,1])
+y_train_pred_RF=classifier_RF.predict(trainset)
+
+print 'RF-Train: Precision & Recall'
+accuracy_train_RF=kobe.evaluate(y_train_pred_RF)
+
+print 'RF-Train: Accuracy'
+print accuracy_train_RF
+
+y_test_RF=classifier_RF.predict_proba(inX)
+
+kobe.tocsv(y_test_RF[:,1])
 
 
 #accuracy=kobe.optimize()
@@ -295,21 +345,21 @@ inX_new=pca.transform(inX)
 #==============================================================================
 # SVC
 #==============================================================================
-classifier_SVC=kobe.train_SVC()
-print 'CV-SVC: Cross-Validation'
-print kobe.cross_validation(classifier_SVC)
-
-y_train_pred_SVC=classifier_SVC.predict(trainset)
-
-print 'SVC-Train: Precision & Recall'
-accuracy_train_SVC=kobe.evaluate(y_train_pred_SVC)
-
-print 'SVC-Train: Accuracy'
-print accuracy_train_SVC
-
-y_test_SVC=classifier_SVC.predict_proba(inX)
-
-kobe.tocsv(y_test_SVC[:,1])
+#classifier_SVC=kobe.train_SVC()
+#print 'CV-SVC: Cross-Validation'
+#print kobe.cross_validation(classifier_SVC)
+#
+#y_train_pred_SVC=classifier_SVC.predict(trainset)
+#
+#print 'SVC-Train: Precision & Recall'
+#accuracy_train_SVC=kobe.evaluate(y_train_pred_SVC)
+#
+#print 'SVC-Train: Accuracy'
+#print accuracy_train_SVC
+#
+#y_test_SVC=classifier_SVC.predict_proba(inX)
+#
+#kobe.tocsv(y_test_SVC[:,1])
 
 print '<----------------------------------------------->'
 print datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
