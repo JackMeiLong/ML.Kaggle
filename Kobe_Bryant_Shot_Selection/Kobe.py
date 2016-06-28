@@ -30,7 +30,6 @@ class Kobe(object):
        
    def loaddataset(self,path,module):
        df=pd.read_csv(path)
-       
        self.df=df
        
        shot_made_flag=df['shot_made_flag']      
@@ -62,12 +61,12 @@ class Kobe(object):
        if module=='train':
            train_df=dataset[np.isnan(shot_made_flag)==False]
            self.trainlabel=train_df['shot_made_flag']
-           train_df=train_df.drop(['shot_made_flag','shot_id'],axis=1)
+           train_df=train_df.drop(['shot_made_flag','shot_id','combined_shot_type'],axis=1)
            self.trainset=train_df
            
        elif module=='test':
            test_df=dataset[np.isnan(shot_made_flag)==True]
-           test_df=test_df.drop(['shot_made_flag'],axis=1)
+           test_df=test_df.drop(['shot_made_flag','combined_shot_type'],axis=1)
            self.testset=test_df
     
    def train_LR(self):
@@ -91,7 +90,7 @@ class Kobe(object):
    def train_GBDT(self):
         samples=self.trainset.values
         target=self.trainlabel.values
-        classifier_GB=GradientBoostingClassifier(n_estimators=1000)
+        classifier_GB=GradientBoostingClassifier(n_estimators=5000)
         classifier_GB.fit(samples,target)
         
         return classifier_GB
@@ -178,40 +177,9 @@ class Kobe(object):
        return accuracy
     
    def explore_feature(self):
-       df=self.df
-       not_need=[]       
-       
-       shot_id=df['shot_id']
-       action_type=df['action_type']
-       combined_shot_type=df['combined_shot_type']
-       
-       not_need.extend(['game_event_id', 'game_id'])
-       
-       lat=df['lat']
-       lon=df['lon']
-       loc_x=df['loc_x']
-       loc_y=df['loc_y']
-       
-       not_need.extend(['lat', 'lon'])
-       
-       minutes=df['minutes_remaining']
-       seconds=df['seconds_remaining']
-       time_combined=pd.DataFrame({'time_combined':minutes.values*60+seconds.values})
-       
-       not_need.extend(['minutes_remaining', 'seconds_remaining'])
-       
-       period=df['period']
-       playoffs=df['playoffs']
-       
-       distance=df['shot_distance']
-       shot_distance=np.sqrt((loc_x/10)**2+(loc_y/10)**2)
-       season=df['season'].apply(lambda x:x[:4])
-       shot_type=df['shot_type']
-       shot_zone_area=df['shot_zone_area']
-       shot_zone_basic=df['shot_zone_basic']
-       shot_zone_range=df['shot_zone_range']
-       opponent=df['opponent']
-       shot_made_flag=df['shot_made_flag']
+       df_main=self.df
+       df_missed = df_main[df_main.shot_made_flag==0].season.value_counts().sort_index()
+       df_shot=df_main[df_main.shot_made_flag==1].season.value_counts().sort_index()
        
        return df
        
@@ -306,20 +274,20 @@ kobe.tocsv(y_test_RF[:,1])
 # GBDT
 #==============================================================================
 
-#classifier_GBDT=kobe.train_GBDT()
+classifier_GBDT=kobe.train_GBDT()
 
 #print 'RF-GBDT: Cross-Validation'
 #print kobe.cross_validation(classifier_GBDT)
 
-#y_train_pred_GBDT=classifier_GBDT.predict(trainset)
-#
-#print 'GBDT-Train: Precision & Recall'
-#accuracy_train_GBDT=kobe.evaluate(y_train_pred_GBDT)
-#
-#print 'GBDT-Train: Accuracy'
-#print accuracy_train_GBDT
-#
-#y_test_GBDT=classifier_GBDT.predict_proba(inX)
+y_train_pred_GBDT=classifier_GBDT.predict(trainset)
+
+print 'GBDT-Train: Precision & Recall'
+accuracy_train_GBDT=kobe.evaluate(y_train_pred_GBDT)
+
+print 'GBDT-Train: Accuracy'
+print accuracy_train_GBDT
+
+y_test_GBDT=classifier_GBDT.predict_proba(inX)
 
 #kobe.tocsv(y_test_GBDT[:,1])
 
