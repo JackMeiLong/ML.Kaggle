@@ -6,6 +6,8 @@ Created on Thu Apr 21 10:50:59 2016
 
 Titanic: Machine Learning from Disaster
 
+https://www.kaggle.com/letfly/titanic/preliminary-exploration/discussion 
+
 """
 import time
 import numpy as np
