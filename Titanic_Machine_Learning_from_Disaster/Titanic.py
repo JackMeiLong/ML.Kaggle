@@ -16,6 +16,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import cross_validation
 from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
 
 class Titanic(object):
     
@@ -24,9 +25,11 @@ class Titanic(object):
         self.trainlabel=[]
         self.testset=[]
         self.testlabel=[]
+        self.origin=[]
         
     def loaddataset(self,path,module):                
        df=pd.read_csv(path)
+              
        subdf = df[['PassengerId','Pclass','Sex','Age','Embarked','Fare','SibSp','Parch']]
        SibSp=subdf['SibSp']
        Parch=subdf['Parch']
@@ -52,6 +55,7 @@ class Titanic(object):
        Fare_Scaled=pd.DataFrame(fare_scaled,columns=['Fare_Scaled'])
        
        if module=='train':
+          self.origin=df
           self.trainlabel=df.Survived
           self.trainset=pd.concat([dummies_Pclass,dummies_Sex,dummies_Embarked,Age_Scaled,Fare_Scaled,SibSp,Parch],axis=1)
        elif module=='test':
@@ -120,6 +124,35 @@ class Titanic(object):
         corrdf=pd.DataFrame(corrdata,index=self.trainset.columns.get_values(),columns=['corr'])
         
         return corrdf
+    
+    def feature_explore(self):
+        df_main=self.origin
+       
+        fig=plt.figure(figsize=(10,10))
+        fig_dims = (3, 2)
+        plt.subplot2grid(fig_dims,(0,0))
+        df_main['Survived'].value_counts().plot(kind='bar',title='Death and Survival Counts')
+        plt.subplot2grid(fig_dims,(0,1))
+        df_main['Pclass'].value_counts().plot(kind='bar',title='Passenger Class Counts')
+        plt.subplot2grid(fig_dims, (1, 0))
+        df_main['Sex'].value_counts().plot(kind='bar',title='Gender Counts')
+        plt.subplot2grid(fig_dims, (1, 1))
+        df_main['Embarked'].value_counts().plot(kind='bar',title='Ports of Embarkation Counts')
+        plt.subplot2grid(fig_dims, (2, 0))
+        df_main['Age'].hist()
+        plt.title('Age Histogram')
+             
+        pclass_xt=pd.crosstab(df_main.Pclass,df_main.Survived)
+        pclass_xt_pct = pclass_xt.div(pclass_xt.sum(1).astype(float), axis=0)
+        pclass_xt_pct.plot(kind='bar', stacked=True,title='Survival Rate by Passenger Classes')
+        
+        sex_xt=pd.crosstab(df_main.Sex,df_main.Survived)
+        sex_xt_pct = sex_xt.div(sex_xt.sum(1).astype(float), axis=0)
+        sex_xt_pct.plot(kind='bar', stacked=True,title='Survival Rate by Sex')
+        
+        embarked_xt=pd.crosstab(df_main.Embarked,df_main.Survived)
+        embarked_xt_pct = embarked_xt.div(embarked_xt.sum(1).astype(float), axis=0)
+        embarked_xt_pct.plot(kind='bar', stacked=True,title='Survival Rate by Embarked')
         
 #==============================================================================
 #Load Dataset
@@ -142,6 +175,8 @@ testset=titanic.testset.values
 
 inX=testset[:,1:]
 
+titanic.feature_explore()
+
 #==============================================================================
 # corr to feature enginering
 #==============================================================================
@@ -152,19 +187,19 @@ inX=testset[:,1:]
 # Logistic Regression
 #==============================================================================
 
-classifier_LR=titanic.train_LR()
-
-print 'Precision-Recall-LR-Train'
-
-y_train_pred_LR=classifier_LR.predict(trainset)
-
-accuracy_train_LR=titanic.evaluate(y_train_pred_LR)
-
-y_test_LR=classifier_LR.predict(inX)
-
-print 'Cross-Validation : Logistic Regression'
-
-scores_LR=titanic.cross_validation(classifier_LR,5)
+#classifier_LR=titanic.train_LR()
+#
+#print 'Precision-Recall-LR-Train'
+#
+#y_train_pred_LR=classifier_LR.predict(trainset)
+#
+#accuracy_train_LR=titanic.evaluate(y_train_pred_LR)
+#
+#y_test_LR=classifier_LR.predict(inX)
+#
+#print 'Cross-Validation : Logistic Regression'
+#
+#scores_LR=titanic.cross_validation(classifier_LR,5)
 
 #titanic.toCSV(y_test_LR)
 
@@ -174,21 +209,21 @@ print '<------------------------------------------------->'
 # Random Forest
 #==============================================================================
 
-classifier_RF=titanic.train_RF()
-
-print 'Precision-Recall-RF-Train'
-
-y_train_pred_RF=classifier_RF.predict(trainset)
-
-accuracy_train_RF=titanic.evaluate(y_train_pred_RF)
-
-y_test_RF=classifier_RF.predict(inX)
-
-print 'Cross-Validation : Random Forest'
-
-scores_RF=titanic.cross_validation(classifier_RF,5)
+#classifier_RF=titanic.train_RF()
 #
-titanic.toCSV(y_test_RF)
+#print 'Precision-Recall-RF-Train'
+#
+#y_train_pred_RF=classifier_RF.predict(trainset)
+#
+#accuracy_train_RF=titanic.evaluate(y_train_pred_RF)
+#
+#y_test_RF=classifier_RF.predict(inX)
+#
+#print 'Cross-Validation : Random Forest'
+#
+#scores_RF=titanic.cross_validation(classifier_RF,5)
+##
+#titanic.toCSV(y_test_RF)
 
 print '<------------------------------------------------->'
 
@@ -196,19 +231,19 @@ print '<------------------------------------------------->'
 # Gadient Boosting
 #==============================================================================
 
-classifier_GB=titanic.train_GBDT()
-
-print 'Precision-Recall-GB-Train'
-
-y_train_pred_GB=classifier_GB.predict(trainset)
-
-accuracy_train_GB=titanic.evaluate(y_train_pred_GB)
-
-y_test_GB=classifier_GB.predict(inX)
-
-print 'Cross-Validation : Gradient Boosting'
-
-scores_GB=titanic.cross_validation(classifier_GB,5)
+#classifier_GB=titanic.train_GBDT()
+#
+#print 'Precision-Recall-GB-Train'
+#
+#y_train_pred_GB=classifier_GB.predict(trainset)
+#
+#accuracy_train_GB=titanic.evaluate(y_train_pred_GB)
+#
+#y_test_GB=classifier_GB.predict(inX)
+#
+#print 'Cross-Validation : Gradient Boosting'
+#
+#scores_GB=titanic.cross_validation(classifier_GB,5)
 
 #titanic.toCSV(y_test_GB)
 
@@ -225,7 +260,4 @@ print '<------------------------------------------------->'
 
 time_end=time.time()
 time_during=time_end-time_start
-
-
-
 
