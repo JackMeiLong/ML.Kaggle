@@ -58,24 +58,24 @@ class Titanic(object):
        PassengerId=subdf['PassengerId']
        
 #      Age&Fare to Scaler
-       scaler=MinMaxScaler()
-       age_scaled=scaler.fit_transform(Age.values)
-       fare_scaled=scaler.fit_transform(Fare.values)
-       
-       Age_Scaled=pd.DataFrame(age_scaled,columns=['Age_Scaled'])
-       Fare_Scaled=pd.DataFrame(fare_scaled,columns=['Fare_Scaled'])
+#       scaler=MinMaxScaler()
+#       age_scaled=scaler.fit_transform(Age.values)
+#       fare_scaled=scaler.fit_transform(Fare.values)
+#       
+#       Age_Scaled=pd.DataFrame(age_scaled,columns=['Age_Scaled'])
+#       Fare_Scaled=pd.DataFrame(fare_scaled,columns=['Fare_Scaled'])
        
        if module=='train':
           self.origin=df
           self.trainlabel=df.Survived
-          self.trainset=pd.concat([Pclass,sex_val,embarked_val,Age_Scaled,Fare_Scaled,Family_size],axis=1)
+          self.trainset=pd.concat([Pclass,dummies_Sex,dummies_Embarked,Age,Fare,Family_size],axis=1)
        elif module=='test':
-          self.testset=pd.concat([PassengerId,Pclass,sex_val,embarked_val,Age_Scaled,Fare_Scaled,Family_size],axis=1)
+          self.testset=pd.concat([PassengerId,Pclass,dummies_Sex,dummies_Embarked,Age,Fare,Family_size],axis=1)
     
     def train_LR(self):
         samples=self.trainset.values
         target=self.trainlabel.values
-        classifier_LR=LogisticRegression(C=2.0, penalty='l2', tol=1e-6)
+        classifier_LR=LogisticRegression(C=1.0, penalty='l2', tol=1e-6)
         classifier_LR.fit(samples,target)
         
         return classifier_LR
@@ -83,15 +83,17 @@ class Titanic(object):
     def train_RF(self):
         samples=self.trainset.values
         target=self.trainlabel.values
-        classifier_RF=RandomForestClassifier(n_estimators=100)
+        classifier_RF=RandomForestClassifier(n_estimators=100,criterion='gini')
         classifier_RF.fit(samples,target)        
-        
+#       10000 & entropy=>0.74641
+#       100 & gini=>0.75598   
         return classifier_RF
     
     def train_GBDT(self):
         samples=self.trainset.values
         target=self.trainlabel.values
-        classifier_GB=GradientBoostingClassifier(n_estimators=1000,learning_rate=0.02)
+        classifier_GB=GradientBoostingClassifier(n_estimators=2000,learning_rate=0.009)
+#       100 & 0.01=>0.76077
         classifier_GB.fit(samples,target)
         
         return classifier_GB
@@ -122,8 +124,10 @@ class Titanic(object):
     
     def cross_validation(self,clf,k):
         
-        scores=cross_validation.cross_val_score(clf,self.trainset.values,self.trainlabel.values,cv=k)
+        scores=cross_validation.cross_val_score(clf,self.trainset.values,self.trainlabel.values,cv=k,scoring='accuracy')
         print scores
+        print scores.mean()
+        print scores.std()*2
         return scores
     
     def toCSV(self,y_pred):
@@ -224,20 +228,22 @@ inX=testset[:,1:]
 #==============================================================================
 # Logistic Regression
 #==============================================================================
-#
-k_list=np.linspace(1,10,4)
-p=2
 
-for k in k_list:
-    k=int(k)
-    classifier_KNN=titanic.train_KNN(k,p)
-    y_train_pred_KNN=classifier_KNN.predict(trainset)
-    print 'Precision-Recall-KNN-Train-K:{0}'.format(k)
-    accuracy_train_KNN=titanic.evaluate(y_train_pred_KNN)
-    y_test_KNN=classifier_KNN.predict(inX)
-    print 'Cross-Validation : KNN-KdTree, k:{0}'.format(k)
-    scores_KNN=titanic.cross_validation(classifier_KNN,5)
-    
+#k_list=np.linspace(1,10,4)
+#p=2
+#
+#for k in k_list:
+#    k=int(k)
+#    classifier_KNN=titanic.train_KNN(k,p)
+#    y_train_pred_KNN=classifier_KNN.predict(trainset)
+#    print 'Precision-Recall-KNN-Train-K:{0}'.format(k)
+#    accuracy_train_KNN=titanic.evaluate(y_train_pred_KNN)
+#    y_test_KNN=classifier_KNN.predict(inX)
+#    print 'Cross-Validation : KNN-KdTree, k:{0}'.format(k)
+#    scores_KNN=titanic.cross_validation(classifier_KNN,5)
+#    if k==1:
+#        titanic.toCSV(y_test_KNN)
+#    
 #
 #titanic.toCSV(y_test_KNN)
 
@@ -247,20 +253,20 @@ for k in k_list:
 # Logistic Regression
 #==============================================================================
 
-#classifier_LR=titanic.train_LR()
-#
-#print 'Precision-Recall-LR-Train'
-#
-#y_train_pred_LR=classifier_LR.predict(trainset)
-#
-#accuracy_train_LR=titanic.evaluate(y_train_pred_LR)
-#
-#y_test_LR=classifier_LR.predict(inX)
-#
-#print 'Cross-Validation : Logistic Regression'
-#
-#scores_LR=titanic.cross_validation(classifier_LR,5)
+classifier_LR=titanic.train_LR()
 
+print 'Precision-Recall-LR-Train'
+
+y_train_pred_LR=classifier_LR.predict(trainset)
+
+accuracy_train_LR=titanic.evaluate(y_train_pred_LR)
+
+y_test_LR=classifier_LR.predict(inX)
+
+print 'Cross-Validation : Logistic Regression'
+
+scores_LR=titanic.cross_validation(classifier_LR,5)
+#
 #titanic.toCSV(y_test_LR)
 
 #print '<------------------------------------------------->'
@@ -291,21 +297,21 @@ for k in k_list:
 # Gadient Boosting
 #==============================================================================
 
-#classifier_GB=titanic.train_GBDT()
-#
-#print 'Precision-Recall-GB-Train'
-#
-#y_train_pred_GB=classifier_GB.predict(trainset)
-#
-#accuracy_train_GB=titanic.evaluate(y_train_pred_GB)
-#
-#y_test_GB=classifier_GB.predict(inX)
-#
-#print 'Cross-Validation : Gradient Boosting'
-#
-#scores_GB=titanic.cross_validation(classifier_GB,5)
+classifier_GB=titanic.train_GBDT()
 
-#titanic.toCSV(y_test_GB)
+print 'Precision-Recall-GB-Train'
+
+y_train_pred_GB=classifier_GB.predict(trainset)
+
+accuracy_train_GB=titanic.evaluate(y_train_pred_GB)
+
+y_test_GB=classifier_GB.predict(inX)
+
+print 'Cross-Validation : Gradient Boosting'
+
+scores_GB=titanic.cross_validation(classifier_GB,5)
+
+titanic.toCSV(y_test_GB)
 
 #print '<------------------------------------------------->'
 
@@ -320,4 +326,11 @@ for k in k_list:
 
 time_end=time.time()
 time_during=time_end-time_start
+
+#==============================================================================
+# 
+#
+#
+#
+#==============================================================================
 
