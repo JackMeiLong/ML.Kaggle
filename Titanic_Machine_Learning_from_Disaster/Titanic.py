@@ -42,12 +42,15 @@ class Titanic(object):
              
        Fare=subdf['Fare'].fillna(value=subdf.Fare.mean())
        
+       Embarked=subdf['Embarked'].fillna(value=subdf.Embarked.max())
+       
        dummies_Sex=pd.get_dummies(subdf['Sex'],prefix='Sex')
        sexes = sorted(subdf['Sex'].unique())
        genders_mapping = dict(zip(sexes, range(0, len(sexes) + 1)))
        sex_val=subdf['Sex'].map(genders_mapping).astype(int)
        
-       dummies_Embarked = pd.get_dummies(subdf['Embarked'], prefix= 'Embarked')     
+       dummies_Embarked = pd.get_dummies(Embarked, prefix= 'Embarked')
+       
        embarked = sorted(subdf['Embarked'].unique())
        embarked_mapping = dict(zip(embarked, range(0, len(embarked) + 1)))
        embarked_val=subdf['Embarked'].map(embarked_mapping).astype(int)
@@ -89,10 +92,10 @@ class Titanic(object):
 #       100 & gini=>0.75598   
         return classifier_RF
     
-    def train_GBDT(self):
+    def train_GBDT(self,n_estimators,learning_rate):
         samples=self.trainset.values
         target=self.trainlabel.values
-        classifier_GB=GradientBoostingClassifier(n_estimators=2000,learning_rate=0.009)
+        classifier_GB=GradientBoostingClassifier(n_estimators=n_estimators,learning_rate=learning_rate)
 #       100 & 0.01=>0.76077
         classifier_GB.fit(samples,target)
         
@@ -253,19 +256,19 @@ inX=testset[:,1:]
 # Logistic Regression
 #==============================================================================
 
-classifier_LR=titanic.train_LR()
-
-print 'Precision-Recall-LR-Train'
-
-y_train_pred_LR=classifier_LR.predict(trainset)
-
-accuracy_train_LR=titanic.evaluate(y_train_pred_LR)
-
-y_test_LR=classifier_LR.predict(inX)
-
-print 'Cross-Validation : Logistic Regression'
-
-scores_LR=titanic.cross_validation(classifier_LR,5)
+#classifier_LR=titanic.train_LR()
+#
+#print 'Precision-Recall-LR-Train'
+#
+#y_train_pred_LR=classifier_LR.predict(trainset)
+#
+#accuracy_train_LR=titanic.evaluate(y_train_pred_LR)
+#
+#y_test_LR=classifier_LR.predict(inX)
+#
+#print 'Cross-Validation : Logistic Regression'
+#
+#scores_LR=titanic.cross_validation(classifier_LR,5)
 #
 #titanic.toCSV(y_test_LR)
 
@@ -297,7 +300,10 @@ scores_LR=titanic.cross_validation(classifier_LR,5)
 # Gadient Boosting
 #==============================================================================
 
-classifier_GB=titanic.train_GBDT()
+n_estimators=np.linspace(500,3000,5)
+learning_rates=np.linspace(0,0.09,10)
+
+classifier_GB=titanic.train_GBDT(3000,0.009)
 
 print 'Precision-Recall-GB-Train'
 
