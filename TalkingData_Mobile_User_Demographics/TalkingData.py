@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jul 12 11:53:08 2016
+Created on Mon Jul 25 21:13:45 2016
 
-@author: meil
+@author: mellon
+TalkingData
 """
-
-
 import pandas as pd
 import numpy as np
 
@@ -40,7 +39,33 @@ class TalkingData(object):
                 self.df_app_label=pd.read_csv(value)
             elif key=='label_categories':
                 self.df_label_category=pd.read_csv(value)  
-            
+    
+    def mergedata(self,module):
+#        device_id=self.df_group_train.device_id
+#        gender=self.df_group_train.gender
+#        age=self.df_group_train.age      
+#        longitude=merge0.longitude
+#        latitude=merge0.latitude              
+#        is_installed=merge1.is_installed
+#        is_active=merge1.is_active
+#        category=merge3.category        
+        if module=='train':
+            merge0=pd.merge(self.df_group_train,self.df_event,on='device_id',how='inner')
+            merge1=pd.merge(merge0,self.df_app_event,on='event_id',how='inner')
+            merge2=pd.merge(merge1,self.df_app_label,on='app_id',how='inner')
+            merge3=pd.merge(merge2,self.df_label_category,on='label_id',how='inner')
+            train=merge3
+            label=self.df_group_train.group
+            self.train=train.drop(['device_id','gender','age','event_id','app_id','label_id'],axis=1)
+            self.label=label
+        elif module=='test':
+            merge0=pd.merge(self.df_group_test,self.df_event,on='device_id',how='inner')
+            merge1=pd.merge(merge0,self.df_app_event,on='event_id',how='inner')
+            merge2=pd.merge(merge1,self.df_app_label,on='app_id',how='inner')
+            merge3=pd.merge(merge2,self.df_label_category,on='label_id',how='inner')
+            test=merge3
+            self.test=test.drop(['device_id','event_id','app_id','label_id'],axis=1)
+        
 
 td=TalkingData()
 
@@ -49,3 +74,5 @@ paths_dict={'events':'events.csv','app_events':'app_events.csv','gender_age_trai
             'app_labels':'app_labels.csv','label_categories':'label_categories.csv'}
 
 td.importdata(paths_dict)
+td.mergedata('train')
+td.mergedata('test')
