@@ -15,24 +15,32 @@ class TalkingData(object):
         self.df_event=[]
         self.df_app_event=[]
         self.df_group_train=[]
+        self.df_group_test=[]
         self.df_device=[]
         self.df_app_label=[]
-        self.df_label_category=[]
-        self.df_group_test=[]
+        self.df_label_category=[]       
         self.train=[]
         self.label=[]
         self.test=[]
     
     def importdata(self,paths_dict):
         
-        for (key,value) in paths_dict:
-            "df_{0}".format(key)=pd.read_csv(value)
-    
-
-
-
-
-
+        for (key,value) in paths_dict.iteritems():
+            if key=='events':
+                self.df_event=pd.read_csv(value)
+            elif key=='app_events':
+                self.df_app_event=pd.read_csv(value)
+            elif key=='gender_age_train':
+                self.df_group_train=pd.read_csv(value)            
+            elif key=='gender_age_test':
+                self.df_group_test=pd.read_csv(value)
+            elif key=='phone_brand_device_model':
+                self.df_device=pd.read_csv(value)
+            elif key=='app_labels':
+                self.df_app_label=pd.read_csv(value)
+            elif key=='label_categories':
+                self.df_label_category=pd.read_csv(value)  
+            
 
 td=TalkingData()
 
