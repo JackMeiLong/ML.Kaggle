@@ -1,4 +1,3 @@
-# coding=utf8
 """
 Created on Tue Jul 12 11:53:08 2016
 
@@ -27,9 +26,17 @@ events.drop("event_id", axis = 1, inplace = True)
 # prep brands
 phone = pd.read_csv("phone_brand_device_model.csv", dtype={"device_id": np.str},
                     usecols = [0, 1, 2])
-#feat = FeatureHasher(n_features=12, input_type="string")
-#
-#feat1 = feat.transform(phone["phone_brand"] + " " + phone["device_model"])
+                    
+phone_brand=pd.concat([phone['phone_brand']],axis=1)
+device_model=pd.concat([phone['device_model']],axis=1)
+
+le=LabelEncoder()
+pb_label=le.fit_transform(phone_brand)
+dm_label=le.fit_transform(device_model)
+
+enc = OneHotEncoder()
+
+enc.fit_transform()
 
 events = events.merge(pd.concat([phone["device_id"], phone["phone_brand"],phone["device_model"]], axis = 1),
                      how = "left", on = "device_id")
@@ -49,16 +56,7 @@ tt=pd.concat([train.phone_brand,phone.device_model],axis=1)
 phone_brand=train.phone_brand
 device_model=train.device_model
 
-#ttp=phone_brand.map(lambda x:{tt.columns[0]:x})
-#ttd=device_model.map(lambda x:{tt.columns[1]:x})
-#ttm=pd.concat([ttp,ttd],axis=1)
-#tta=ttm.values
-#ttl=[]
-#
-#
-#for te in tta:
-#    te[0].update(te[1])
-#    ttl.append(te[0])
+
 
 
 train = train.groupby("device_id").mean().reset_index()
@@ -82,4 +80,3 @@ test.fillna(-1,inplace=True)
 test=test.groupby('device_id').mean().reset_index()
 #test.drop(['device_id'],axis=1,inplace=True)
 print 'test data prepared'
-
