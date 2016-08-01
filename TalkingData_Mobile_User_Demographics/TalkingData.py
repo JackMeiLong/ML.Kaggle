@@ -36,9 +36,11 @@ pb_label=le.fit_transform(phone_brand)
 dm_label=le.fit_transform(device_model)
 
 ph_list=[]
+ph_dict=[]
 
 for i in range(pb_label.shape[0]):
     ph_list.append([pb_label[i],dm_label[i]])
+    ph_dict.append({phone_brand.columns[0]:pb_label[i],device_model.columns[0]:dm_label[i]})
     
 enc = OneHotEncoder()
 
@@ -46,8 +48,12 @@ ph_encode=enc.fit_transform(ph_list).toarray()
 
 ph_df=pd.DataFrame(ph_encode)
 
-#events = events.merge(pd.concat([phone["device_id"],ph_df], axis = 1),
-#                     how = "left", on = "device_id")
+feat=FeatureHasher(n_features=10)
+ph_fe=feat.fit_transform(ph_dict).toarray()
+phfe_df=pd.DataFrame(ph_fe)
+
+events = events.merge(pd.concat([phone["device_id"],phfe_df], axis = 1),
+                     how = "left", on = "device_id")
 
 print("pre-merging and hashing finished.")
 
@@ -59,7 +65,7 @@ train.drop("group", axis = 1, inplace = True)
 train = train.merge(events, how = "left", on = "device_id")
 train.fillna(-1, inplace = True)
 
-tt=pd.concat([train.phone_brand,phone.device_model],axis=1)
+#tt=pd.concat([train.phone_brand,phone.device_model],axis=1)
 #phone_brand=train.phone_brand
 #device_model=train.device_model
 
