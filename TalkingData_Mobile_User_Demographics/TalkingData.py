@@ -1,3 +1,4 @@
+# coding=utf8
 """
 Created on Tue Jul 12 11:53:08 2016
 
@@ -26,7 +27,7 @@ events.drop("event_id", axis = 1, inplace = True)
 # prep brands
 phone = pd.read_csv("phone_brand_device_model.csv", dtype={"device_id": np.str},
                     usecols = [0, 1, 2])
-                    
+
 phone_brand=pd.concat([phone['phone_brand']],axis=1)
 device_model=pd.concat([phone['device_model']],axis=1)
 
@@ -34,13 +35,19 @@ le=LabelEncoder()
 pb_label=le.fit_transform(phone_brand)
 dm_label=le.fit_transform(device_model)
 
+ph_list=[]
+
+for i in range(pb_label.shape[0]):
+    ph_list.append([pb_label[i],dm_label[i]])
+    
 enc = OneHotEncoder()
 
-enc.fit_transform()
+ph_encode=enc.fit_transform(ph_list).toarray()
 
-events = events.merge(pd.concat([phone["device_id"], phone["phone_brand"],phone["device_model"]], axis = 1),
-                     how = "left", on = "device_id")
-#del phone, feat, feat1
+ph_df=pd.DataFrame(ph_encode)
+
+#events = events.merge(pd.concat([phone["device_id"],ph_df], axis = 1),
+#                     how = "left", on = "device_id")
 
 print("pre-merging and hashing finished.")
 
@@ -53,17 +60,14 @@ train = train.merge(events, how = "left", on = "device_id")
 train.fillna(-1, inplace = True)
 
 tt=pd.concat([train.phone_brand,phone.device_model],axis=1)
-phone_brand=train.phone_brand
-device_model=train.device_model
-
-
-
+#phone_brand=train.phone_brand
+#device_model=train.device_model
 
 train = train.groupby("device_id").mean().reset_index()
 train = train.merge(t2, how ="left", on = "device_id")
 
 label = train["group"].copy()
-le=LabelEncoder()
+#le=LabelEncoder()
 lable=le.fit_transform(label)
 
 train.drop(["group", "device_id"], axis = 1, inplace = True)
@@ -80,3 +84,4 @@ test.fillna(-1,inplace=True)
 test=test.groupby('device_id').mean().reset_index()
 #test.drop(['device_id'],axis=1,inplace=True)
 print 'test data prepared'
+
