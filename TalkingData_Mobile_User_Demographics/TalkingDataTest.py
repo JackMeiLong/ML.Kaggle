@@ -1,118 +1,150 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jul 31 18:01:00 2016
+Created on Tue Aug 02 19:30:51 2016
 
-@author: mellon
+@author: meil
 """
 
-import pandas as pd
-import numpy as np
-from scipy import sparse
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 from sklearn.feature_extraction import FeatureHasher
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from sklearn.cross_validation import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import log_loss
+#from sklearn.cross_validation import train_test_split
+#from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+#from sklearn.metrics import log_loss
+#from sklearn.tree import DecisionTreeClassifier
+#from sklearn.grid_search import GridSearchCV
 
-# Create bag-of-apps in character string format
-# first by event
-# then merge to generate larger bags by device
+# Any results you write to the current directory are saved as output.
 
-##################
-#   App Labels
-##################
+# loading data
+events = pd.read_csv("events.csv", dtype = {"device_id": np.str}, infer_datetime_format = True, parse_dates = ["timestamp"])
+app_events = pd.read_csv("app_events.csv", usecols = [0, 2, 3],
+                            dtype = {"is_active": np.float16, "is_installed": np.float16})
 
-print("# Read App Labels")
-app_lab = pd.read_csv("app_labels.csv", dtype={'device_id': np.str})
-app_lab = app_lab.groupby("app_id")["label_id"].apply(
-    lambda x: " ".join(str(s) for s in x))
+# get hour and drop timestamp
+events["hour"] = events["timestamp"].apply(lambda x: x.hour).astype(np.int8)
+events.drop("timestamp", axis = 1, inplace = True)
 
-##################
-#   App Events
-##################
-print("# Read App Events")
-app_ev = pd.read_csv("app_events.csv", dtype={'device_id': np.str})
-app_ev["app_lab"] = app_ev["app_id"].map(app_lab)
-app_ev = app_ev.groupby("event_id")["app_lab"].apply(
-    lambda x: " ".join(str(s) for s in x))
+# merge data w/o train or test
+events = events.merge(app_events, how = "left", on = "event_id")
+del app_events
+events.drop("event_id", axis = 1, inplace = True)
 
-#del app_lab
+# prep brands
+phone = pd.read_csv("phone_brand_device_model.csv", dtype={"device_id": np.str})
 
-##################
-#     Events
-##################
-print("# Read Events")
-events = pd.read_csv("events.csv", dtype={'device_id': np.str})
-events["app_lab"] = events["event_id"].map(app_ev)
-events = events.groupby("device_id")["app_lab"].apply(
-    lambda x: " ".join(str(s) for s in x))
+print (events.info())
+print (phone.info())
 
-#del app_ev
+# feature hasher
+feat = FeatureHasher(n_features=12, input_type="string", dtype=np.float32)
+print(feat)
 
-##################
-#   Phone Brand
-##################
-print("# Read Phone Brand")
-pbd = pd.read_csv("phone_brand_device_model.csv",
-                  dtype={'device_id': np.str})
-pbd.drop_duplicates('device_id', keep='first', inplace=True)
+feat1 = feat.transform(phone["phone_brand"] + " " + phone["device_model"])
+
+print(feat1) 
+
+events = events.merge(pd.concat([phone["device_id"], pd.DataFrame(phone["phone_brand"] + " " + phone["device_model"])], axis = 1), how = "left", on = "device_id")
+
+print(events.head(5))
+
+del phone, feat, feat1
+
+print("pre-merging and hashing finished.")
+
+# train steps
+train = pd.read_csv("gender_age_train.csv", dtype = {"device_id": np.str},\
+                    usecols = [0, 3])
+t2 = train.copy()
+train.drop("group", axis = 1, inplace = True)
+train = train.merge(events, how = "left", on = "device_id")
+train.fillna(-1, inplace = True)
+train = train.groupby("device_id").mean().reset_index()
+train = train.merge(t2, how ="left", on = "device_id")
+
+label = train["group"].copy()
+train.drop(["group", "device_id"], axis = 1, inplace = True)
+del t2
+
+print("train data merged and prepared")
+print("-----------------------------------")
+print(train.info())
+print(train.head(5))
+print("-----------------------------------")
 
 
-##################
-#  Train and Test
-##################
-print("# Generate Train and Test")
-train = pd.read_csv("gender_age_train.csv",
-                    dtype={'device_id': np.str})
-train["app_lab"] = train["device_id"].map(events)
-train = pd.merge(train, pbd, how='left',
-                 on='device_id', left_index=True)
+# splitting data for memory and validation
+#train, valid, train_lab, valid_lab = train_test_split(train, label, train_size = 250000, test_size = 100,\
+#                                                        random_state = 123, stratify = label)
+#del valid, valid_lab
+#print("train data splitted")
 
-test = pd.read_csv("gender_age_test.csv",
-                   dtype={'device_id': np.str})
-test["app_lab"] = test["device_id"].map(events)
-test = pd.merge(test, pbd, how='left',
-                on='device_id', left_index=True)
-
-#del pbd
+# building Adaboost model
+#dt = DecisionTreeClassifier(criterion="gini", max_depth=None, random_state=123)
+#ada = AdaBoostClassifier(base_estimator=dt, n_estimators=700, learning_rate=0.05, random_state=123)
+##params = {"n_estimators": [20, 30, 100], "base_estimator__max_depth": [3, 4, None], "learning_rate": [0.01, 0.02]}
+#params = {"n_estimators": [800], "base_estimator__max_depth": [None], "learning_rate": [0.04]}
+#grid = GridSearchCV(ada, params, scoring = "log_loss", cv = 3, n_jobs = -1)
+#
+#grid.fit(train, label)
+#del train, label
+#
+#print("train finished")
+##print("validation accuracy: " + str(ada.score(valid, valid_lab)))
+##print("validation log loss: " + str(log_loss(valid_lab, ada.predict_proba(valid))))
+##del valid, valid_lab
+#
+#print(pd.DataFrame(grid.grid_scores_))
+#
+## load test data merge with events
+#test = pd.read_csv("../input/gender_age_test.csv", dtype = {"device_id": np.str})
+#
+#test = test.merge(events, how = "left", on = "device_id")
 #del events
-
-# train.to_csv("train.csv", index=False)
-# test.to_csv("test.csv", index=False)
-
-##################
-#   Build Model
-##################
-
-# def get_hash_data(df):
-#     hasher = FeatureHasher(input_type='string')
-#     # hasher = DictVectorizer(sparse=False)
-#     df = df[["phone_brand", "device_model", "app_id"]].apply(
-#         lambda x: ",".join(str(s) for s in x), axis=1)
-#     df = hasher.transform(df.apply(lambda x: x.split(",")))
-#     return df
-
-
-def get_hash_data(train, test):
-    df = pd.concat((train, test), axis=0, ignore_index=True)
-    split_len = len(train)
-
-    # TF-IDF Feature
-    # tfv = TfidfVectorizer(min_df=1)
-    tfv = CountVectorizer(min_df=1, binary=1)
-    df = df[["phone_brand", "device_model", "app_lab"]].astype(np.str).apply(
-        lambda x: " ".join(s for s in x), axis=1).fillna("Missing")
-    df_tfv = tfv.fit_transform(df)
-
-    train = df_tfv[:split_len, :]
-    test = df_tfv[split_len:, :]
-    return train, test
-
-# Group Labels
-Y = train["group"]
-lable_group = LabelEncoder()
-Y = lable_group.fit_transform(Y)
-
-device_id = test["device_id"].values
-train_new, test_new= get_hash_data(train,test)
+#print("test loaded and merged")
+#
+#
+## prep test data for prediction
+##ids = test["device_id"].copy()
+##test.drop("device_id", axis = 1, inplace = True)
+#test.fillna(-1, inplace = True)
+#test["hour"] = test["hour"].astype(np.float16)
+#test = test.groupby("device_id").mean().reset_index()
+#ids = test["device_id"].copy()
+#test.drop("device_id", axis = 1, inplace = True)
+#
+#print("test prepared")
+#print("-----------------------------------")
+#print(test.info())
+#print("-----------------------------------")
+#
+#pred = grid.predict_proba(test)
+#
+##ind = np.array_split(np.arange(test.shape[0]), 20)
+##print("ind shape: " + str(len(ind)))
+##pred = np.empty((test.shape[0], len(ada.classes_)), dtype = np.float32)
+##print("pred empty shape: " + str(pred.shape))
+#
+##print("starting prediction")
+##run = 1
+##for i in ind:
+##    pred[i, :] = ada.predict_proba(test.iloc[i, :]).astype(np.float32)
+##    print("prediction round: " + str(run) + " of " + str(len(ind)))
+##    run += 1
+#
+#del test #, ind
+#print("prediction finished")
+#
+#pred = pd.concat([ids, pd.DataFrame(pred, columns = grid.best_estimator_.classes_)], axis = 1)
+#del ada, dt, grid, ids
+##pred.fillna(class_prob, inplace = True)
+##del class_prob
+#print("concat finished")
+#print("-----------------------------------")
+#
+#sub = pred.copy() #.groupby("device_id").mean().reset_index()
+#del pred
+#print("shape of submission: " + str(sub.shape))
+#sub.to_csv("submission.csv", index = False)
+#del sub
+#print("submission saving finished.")
