@@ -80,28 +80,29 @@ print("test loaded and merged")
 
 test.fillna(-1, inplace = True)
 test["hour"] = test["hour"].astype(np.float16)
-test = test.groupby("device_id").mean().reset_index()
-ids = test["device_id"].copy()
-test.drop("device_id", axis = 1, inplace = True)
-
-print("test prepared")
-print("-----------------------------------")
-print(test.info())
-print("-----------------------------------")
-
-#Train
-
-rfc=RandomForestClassifier(n_estimators=10, criterion='gini')
-X=train.values
-y=clas
-rfc.fit(X,y)
-
-y_pred=rfc.predict_proba(test)
-
-
-sub =pd.concat([ids,pd.DataFrame(y_pred)],axis=1)
-#del pred
-print("shape of submission: " + str(sub.shape))
-sub.to_csv("sample_submission.csv", index = False)
-#del sub
-print("submission saving finished.")
+#test = test.groupby("device_id").mean().reset_index()
+#ids = test["device_id"].copy()
+#test.drop("device_id", axis = 1, inplace = True)
+#
+#print("test prepared")
+#print("-----------------------------------")
+#print(test.info())
+#print("-----------------------------------")
+#
+##Train
+#
+#rfc=RandomForestClassifier(n_estimators=500, criterion='gini')
+#X=train.values
+#y=clas
+#rfc.fit(X,y)
+#
+#y_pred=rfc.predict_proba(test)
+#
+#y_pred_df=pd.DataFrame(y_pred,columns=le.classes_.tolist())
+#
+#sub =pd.concat([ids,y_pred_df],axis=1)
+##del pred
+#print("shape of submission: " + str(sub.shape))
+#sub.to_csv("sample_submission.csv", index = False)
+##del sub
+#print("submission saving finished.")
